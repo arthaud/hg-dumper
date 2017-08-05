@@ -245,22 +245,50 @@ def fetch_hg(url, directory, jobs, retry, timeout):
                       jobs,
                       args=(url, directory, retry, timeout))
 
-        printf('[-] Running hg up -C\n')
+        printf('[-] Running hg update -C\n')
         os.chdir(directory)
-        subprocess.check_call(['hg', 'up', '-C'])
+        subprocess.check_call(['hg', 'update', '-C'])
         return 0
 
     # no directory listing
     printf('[-] Fetching common files\n')
     tasks = [
+        '.hg/00changelog.i',
+        '.hg/branch',
+        '.hg/cache/branch2-served',
+        '.hg/cache/branchheads-served',
+        '.hg/cache/checkisexec',
+        '.hg/cache/checklink',
+        '.hg/cache/checklink-target',
+        '.hg/cache/checknoexec',
+        '.hg/dirstate',
+        '.hg/hgrc',
+        '.hg/last-message.txt',
+        '.hg/requires',
+        '.hg/store',
+        '.hg/store/00changelog.i',
+        '.hg/store/00manifest.i',
+        '.hg/store/fncache',
+        '.hg/store/phaseroots',
+        '.hg/store/undo',
+        '.hg/store/undo.phaseroots',
+        '.hg/undo.bookmarks',
+        '.hg/undo.branch',
+        '.hg/undo.desc',
+        '.hg/undo.dirstate',
         '.hgignore',
-        # TODO
     ]
     process_tasks(tasks,
                   DownloadWorker,
                   jobs,
                   args=(url, directory, retry, timeout))
-    # TODO
+
+    # TODO: explore:
+    # dirstate ?
+    # store/00changelog.i
+    # store/00manifest.i
+    # store/fncache
+    # store/undo
     return 0
 
 
