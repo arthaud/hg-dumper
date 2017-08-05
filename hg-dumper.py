@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
 from contextlib import closing
 import argparse
 import multiprocessing
@@ -8,14 +8,16 @@ import re
 import socket
 import subprocess
 import sys
-import urllib.parse
+import urlparse
 
 import bs4
 import requests
 import socks
 
 
-def printf(fmt, *args, file=sys.stdout):
+def printf(fmt, *args, **kwargs):
+    file = kwargs.pop('file', sys.stdout)
+
     if args:
         fmt = fmt % args
 
@@ -34,7 +36,7 @@ def get_indexed_files(response):
     files = []
 
     for link in html.find_all('a'):
-        url = urllib.parse.urlparse(link.get('href'))
+        url = urlparse.urlparse(link.get('href'))
 
         if (url.path and
                 url.path != '.' and
@@ -54,7 +56,7 @@ def create_intermediate_dirs(path):
     if dirname and not os.path.exists(dirname):
         try:
             os.makedirs(dirname)
-        except FileExistsError:
+        except OSError:
             pass # race condition
 
 
@@ -62,7 +64,7 @@ class Worker(multiprocessing.Process):
     ''' Worker for process_tasks '''
 
     def __init__(self, pending_tasks, tasks_done, args):
-        super().__init__()
+        super(Worker, self).__init__()
         self.daemon = True
         self.pending_tasks = pending_tasks
         self.tasks_done = tasks_done
