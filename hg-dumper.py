@@ -11,6 +11,8 @@ import sys
 import urlparse
 
 import bs4
+import mercurial.dispatch
+import mercurial.util
 import requests
 import socks
 
@@ -285,12 +287,47 @@ def fetch_hg(url, directory, jobs, retry, timeout):
                   jobs,
                   args=(url, directory, retry, timeout))
 
-    # TODO: explore:
-    # dirstate ?
-    # store/00changelog.i
-    # store/00manifest.i
-    # store/fncache
-    # store/undo
+    # run hg verify
+    printf('[-] Running hg verify with hook on open()\n')
+
+    os.chdir(directory)
+    session = requests.Session()
+    session.mount(url, requests.adapters.HTTPAdapter(max_retries=retry))
+    hg_directory_path = os.path.join(directory, '.hg')
+
+    def open_hook(fun):
+        def wrapper(filename, *args, **kwargs):
+            if filename.startswith(hg_directory_path) and not os.path.exists(filename):
+                relpath = filename[len(hg_directory_path) + 1:]
+
+                with closing(session.get('%s/.hg/%s' % (url, relpath),
+                                         allow_redirects=False,
+                                         stream=True,
+                                         timeout=timeout)) as response:
+                    printf('[-] Fetching %s/.hg/%s [%d]\n', url, relpath, response.status_code)
+
+                    if response.status_code == 200:
+                        create_intermediate_dirs(filename)
+
+                        # write file
+                        with open(filename, 'wb') as f:
+                            for chunk in response.iter_content(4096):
+                                f.write(chunk)
+
+            return fun(filename, *args, **kwargs)
+        return wrapper
+
+    # add hook
+    mercurial.util.posixfile = open_hook(mercurial.util.posixfile)
+
+    # run hg verify
+    mercurial.dispatch.dispatch(mercurial.dispatch.request(['verify']))
+
+    printf('[-] Running hg update -C\n')
+
+    # run hg update -C
+    mercurial.dispatch.dispatch(mercurial.dispatch.request(['update', '-C']))
+
     return 0
 
 
