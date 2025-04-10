@@ -8,7 +8,7 @@ import re
 import socket
 import subprocess
 import sys
-import urlparse
+import urllib.parse as urlparse
 
 import bs4
 import mercurial.dispatch
